@@ -1,7 +1,5 @@
-workbook_name = 'Sample A.xlsx'
+input_filename = 'Sample A.xlsx'
 output_filename = 'Sample A - Output.csv'
-worksheet_name = 'Stop Loss'
-output_worksheet_name = 'Sample A - Output'
 
 logging_level = 'DEBUG'
 try:
@@ -28,7 +26,8 @@ logger.setLevel(level)
 def main():
     logger.debug('Calling main')
 
-    data = getWorkbook(workbook_name)
+    data = getData(input_filename)
+    data = cleanData(data)
     saveData(data)
 
 
@@ -41,14 +40,49 @@ def main():
 
 
 
-def getWorkbook(workbook_name):
-    logger.debug('Calling getWorkbook')
-    workbook = pandas.read_excel(workbook_name, header=5) # This sets the column labels and removes the header(first 5 rows)
+def getData(input_filename): # non-OOP adapter pattern
+    logger.debug('Calling getData')
+    data = getDataFromExcel(input_filename)
+    return data
+
+def getDataFromExcel(input_filename):
+    logger.debug('Calling getDataFromExcel')
+    workbook = pandas.read_excel(input_filename, header=5) # This sets the column labels and removes the header(first 5 rows)
+    logger.debug(f'Column labels:\n {workbook.columns.tolist()}')
     return workbook
 
-def saveData(data): # non-OOP adapter pattern
+def cleanData(data):
+    logger.debug('Calling cleanData')
+    data = removeBlankRows(data)
+    data = FillInMissingData(data)
+    return data
+
+def removeBlankRows(data):
+    logger.debug('Calling removeBlankRows')
+    data = data.dropna(subset = ["Claim Number"])
+    return data
+
+def FillInMissingData(data):
+    logger.debug('Calling FillInMissingData')
+    data = data.ffill() # Using ffill to propagate data from "top" rows to "below" rows because input data was designed for human readers in that they would assume missing data on "child" rows could be found on "parent" rows.
+    return data
+
+def saveData(data):
     logger.debug('Calling saveData')
+    data = formatDataForSaving(data) # Doing this at save time since there is some data loss (rounding numbers) and may cause unexpected results otherwise.
     saveDataAsCSV(data)
+
+def formatDataForSaving(data):
+    # data = data.style.format({'label': '${0:,.2f}'})
+    # data['Allowance'] = data['Allowance'].replace( '[\$,)]','', regex=True ).replace( '[(]','-',   regex=True )
+    # data['Allowance'] = data['Allowance'].apply("${:.2f}")
+    format_mapping={
+        'Allowance': '${:,.2f}',
+        'Paid\nAmount': '${:,.2f}'
+        }
+    for key, value in format_mapping.items():
+        data[key] = data[key].apply(value.format)
+    return data
 
 def saveDataAsCSV(data):
     logger.debug('Calling saveDataAsCSV')
