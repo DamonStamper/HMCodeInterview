@@ -1,14 +1,13 @@
 workbook_name = 'Sample A.xlsx'
-output_workbook_name = 'Sample A - Output.csv'
+output_filename = 'Sample A - Output.csv'
 worksheet_name = 'Stop Loss'
 output_worksheet_name = 'Sample A - Output'
 
 logging_level = 'DEBUG'
 try:
-    import csv
     import logging
 
-    import openpyxl
+    import pandas
 except:
     raise Exception("Could not load required python libraries. Please run 'pip install -r requirements.txt' then try again.")
 
@@ -26,35 +25,41 @@ loglevels = {
 level = loglevels[logging_level]
 logger.setLevel(level)
 
-logger.info('Loading data')
-logger.debug(f'Loading workbook "{workbook_name}"')
-workbook_object = openpyxl.load_workbook(filename = workbook_name)
-logger.debug(f'Loaded workbook, {workbook_object}')
+def main():
+    logger.debug('Calling main')
 
-logger.debug(f'Selecting worksheet_name "{worksheet_name}"')
-worksheet_object = workbook_object[worksheet_name]
-logger.debug(f'Selected worksheet_name, "{worksheet_object}"')
-logger.debug(f"A1 contents:\n {worksheet_object['A1'].value}")
+    data = getWorkbook(workbook_name)
+    saveData(data)
 
-logger.info('Writing data')
-logger.debug(f'Opening {output_workbook_name} in write mode.')
 
-try:
-    with open(output_workbook_name, 'w', newline='') as outputfile:
-        logger.debug(f'Opened {output_workbook_name} in write mode.')
-        output = csv.writer(outputfile, delimiter=' ', quotechar='|', quoting=csv.QUOTE_MINIMAL)
 
-        fieldnames = ['first_name', 'last_name']
-        logger.debug('Creating DictWriter')
-        writer = csv.DictWriter(outputfile, fieldnames=fieldnames)
-        logger.debug('Created DictWriter')
-        logger.debug('Writing data')
-        writer.writeheader()
-        writer.writerow({'first_name': 'Baked', 'last_name': 'Beans'})
-        writer.writerow({'first_name': 'Lovely', 'last_name': 'Spam'})
-        logger.debug('Wrote data')
-except Exception as e:
-    if isinstance(e, PermissionError):
-        print("PermissionError. Please ensure that the file is not currently open.")
-    else:
-        raise
+
+
+
+
+
+
+
+
+def getWorkbook(workbook_name):
+    logger.debug('Calling getWorkbook')
+    workbook = pandas.read_excel(workbook_name, header=5) # This sets the column labels and removes the header(first 5 rows)
+    return workbook
+
+def saveData(data): # non-OOP adapter pattern
+    logger.debug('Calling saveData')
+    saveDataAsCSV(data)
+
+def saveDataAsCSV(data):
+    logger.debug('Calling saveDataAsCSV')
+    data.to_csv(output_filename, index = False)
+    logger.debug(f'Data saved as CSV at location "{output_filename}"')
+
+# def RemoveHeader(workbook):
+#     logger.debug('Calling RemoveHeader')
+#     logger.debug(f"first dataframe before removing header:\n\n {workbook.iloc[[0]]}")
+#     # workbook = workbook.drop(index=workbook.index[[0, 1, 2, 3]]) # starting at index 0, remove 5 columns
+#     logger.debug(f"first dataframe after removing header:\n\n {workbook.iloc[[0]]}")
+#     return workbook
+
+main()
