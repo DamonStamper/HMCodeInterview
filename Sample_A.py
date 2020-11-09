@@ -73,9 +73,6 @@ def saveData(data):
     saveDataAsCSV(data)
 
 def formatDataForSaving(data):
-    # data = data.style.format({'label': '${0:,.2f}'})
-    # data['Allowance'] = data['Allowance'].replace( '[\$,)]','', regex=True ).replace( '[(]','-',   regex=True )
-    # data['Allowance'] = data['Allowance'].apply("${:.2f}")
     format_mapping={
         'Allowance': '${:,.2f}',
         'Paid\nAmount': '${:,.2f}'
@@ -88,12 +85,5 @@ def saveDataAsCSV(data):
     logger.debug('Calling saveDataAsCSV')
     data.to_csv(output_filename, index = False)
     logger.debug(f'Data saved as CSV at location "{output_filename}"')
-
-# def RemoveHeader(workbook):
-#     logger.debug('Calling RemoveHeader')
-#     logger.debug(f"first dataframe before removing header:\n\n {workbook.iloc[[0]]}")
-#     # workbook = workbook.drop(index=workbook.index[[0, 1, 2, 3]]) # starting at index 0, remove 5 columns
-#     logger.debug(f"first dataframe after removing header:\n\n {workbook.iloc[[0]]}")
-#     return workbook
 
 main()
