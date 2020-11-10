@@ -4,7 +4,9 @@ output_filename = 'Sample A - Output.csv'
 logging_level = 'DEBUG'
 try:
     import logging
+    import datetime
 
+    import openpyxl
     import pandas
 except:
     raise Exception("Could not load required python libraries. Please run 'pip install -r requirements.txt' then try again.")
@@ -47,13 +49,43 @@ def getData(input_filename): # non-OOP adapter pattern
 
 def getDataFromExcel(input_filename):
     logger.debug('Calling getDataFromExcel')
-    workbook = pandas.read_excel(input_filename, header=5) # This sets the column labels and removes the header(first 5 rows)
+    # workbook = pandas.read_excel(input_filename, header=5,converters={'Service\nDate From':str, 'Service\nDate To':str}) # This sets the column labels and removes the header(first 5 rows)
+    # workbook = pandas.read_excel(input_filename, header=5, converters={'Service\nDate From':str, 'Service\nDate To':str}, dtype={'Service\nDate From':str, 'Service\nDate To':str}) # This sets the column labels and removes the header(first 5 rows)
+    # workbook = pandas.read_excel(input_filename, header=5, dtype=str, converters={'Service\nDate From':str, 'Service\nDate To':str, 'Allowance':float, 'Paid\nAmount':float}) # This sets the column labels and removes the header(first 5 rows)
+    # workbook = pandas.read_excel(input_filename, header=5, dtype=str, converters={'Allowance':float, 'Paid\nAmount':float}) # This sets the column labels and removes the header(first 5 rows)
+    # workbook = pandas.read_excel(input_filename, dtype=str, header=5, converters={'Service\nDate From':str, 'Service\nDate To':str, 'Allowance':float, 'Paid\nAmount':float}) # This sets the column labels and removes the header(first 5 rows)
+    workbook = pandas.read_excel(input_filename, header=5, dtype=str, converters={'Allowance':float, 'Paid\nAmount':float}) # This sets the column labels and removes the header(first 5 rows)
+
+    workbook = addExtraColumnFromExcel(input_filename, workbook)
+
     logger.debug(f'Column labels:\n {workbook.columns.tolist()}')
+    date_cell = workbook.iloc[14]['Service\nDate From']
+    logger.debug(f'E14:\n {date_cell}')
+    return workbook
+
+def addExtraColumnFromExcel(input_filename, workbook):
+    logger.debug('Calling addExtraColumnFromExcel')
+    wb = openpyxl.load_workbook(input_filename)
+    ws = wb.active
+
+    column_addendum_header = ws['A1'].value
+    logger.debug(f'Additional column header to add:\n{column_addendum_header}')
+    
+    column_addendum_values = (
+        ws['A2'].value,
+        ws['A3'].value,
+        ws['A4'].value
+        )
+
+    column_addendum_value = "\n".join(column_addendum_values)
+    logger.debug(f'Additional column value to add:\n{column_addendum_value}')
+
+    workbook[column_addendum_header] = column_addendum_value
     return workbook
 
 def cleanData(data):
     logger.debug('Calling cleanData')
-    data = removeBlankRows(data)
+    # data = removeBlankRows(data)
     data = FillInMissingData(data)
     return data
 
@@ -73,13 +105,34 @@ def saveData(data):
     saveDataAsCSV(data)
 
 def formatDataForSaving(data):
+    logger.debug('Calling formatDataForSaving')
+    logger.debug(data.dtypes)
+
+    # data['Service\nDate From'] = pandas.to_datetime(data['Service\nDate From'], format='%m/%d/%Y', errors='ignore') # This cruddyness is to convert automatically converted datetime info back to date. Using converters and dtype weren't working--likely due to the underlying openpyxl converting the dates before pandas gets them.
+    # data['Finalized\nDate'] = pandas.to_datetime(data['Finalized\nDate'], errors='ignore')
+    # data['Finalized\nDate'] = data['Service\nDate From'].dt.strftime('%m/%d/%Y')
+
+    troublesomeTimeColumns = ('Finalized\nDate','Service\nDate From','Service\nDate To')
+
+    for column in troublesomeTimeColumns:
+        data[column] = list(map(dateFix, data[column]))
+
     format_mapping={
         'Allowance': '${:,.2f}',
         'Paid\nAmount': '${:,.2f}'
         }
     for key, value in format_mapping.items():
         data[key] = data[key].apply(value.format)
+
     return data
+
+def dateFix(input):
+    iterant = pandas.to_datetime(input, errors='ignore')
+    try:
+        iterant = iterant.strftime('%m/%d/%Y')
+    except Exception:
+        pass
+    return iterant
 
 def saveDataAsCSV(data):
     logger.debug('Calling saveDataAsCSV')
