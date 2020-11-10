@@ -32,16 +32,6 @@ def main():
     data = cleanData(data)
     saveData(data)
 
-
-
-
-
-
-
-
-
-
-
 def getData(input_filename): # non-OOP adapter pattern
     logger.debug('Calling getData')
     data = getDataFromExcel(input_filename)
@@ -49,12 +39,6 @@ def getData(input_filename): # non-OOP adapter pattern
 
 def getDataFromExcel(input_filename):
     logger.debug('Calling getDataFromExcel')
-    # workbook = pandas.read_excel(input_filename, header=5,converters={'Service\nDate From':str, 'Service\nDate To':str}) # This sets the column labels and removes the header(first 5 rows)
-    # workbook = pandas.read_excel(input_filename, header=5, converters={'Service\nDate From':str, 'Service\nDate To':str}, dtype={'Service\nDate From':str, 'Service\nDate To':str}) # This sets the column labels and removes the header(first 5 rows)
-    # workbook = pandas.read_excel(input_filename, header=5, dtype=str, converters={'Service\nDate From':str, 'Service\nDate To':str, 'Allowance':float, 'Paid\nAmount':float}) # This sets the column labels and removes the header(first 5 rows)
-    # workbook = pandas.read_excel(input_filename, header=5, dtype=str, converters={'Allowance':float, 'Paid\nAmount':float}) # This sets the column labels and removes the header(first 5 rows)
-    # workbook = pandas.read_excel(input_filename, dtype=str, header=5, converters={'Service\nDate From':str, 'Service\nDate To':str, 'Allowance':float, 'Paid\nAmount':float}) # This sets the column labels and removes the header(first 5 rows)
-    # workbook = pandas.read_excel(input_filename, header=5, dtype=str, converters={'Allowance':float, 'Paid\nAmount':float}) # This sets the column labels and removes the header(first 5 rows)
     workbook = pandas.read_excel(input_filename, header=5, dtype=object) # This sets the column labels and removes the header(first 5 rows)
 
     workbook = addExtraColumnFromExcel(input_filename, workbook)
@@ -86,7 +70,6 @@ def addExtraColumnFromExcel(input_filename, workbook):
 
 def cleanData(data):
     logger.debug('Calling cleanData')
-    # data = removeBlankRows(data)
     data = FillInMissingData(data)
     return data
 
@@ -115,28 +98,17 @@ def formatDataForSaving(data):
     for column in troublesomeTimeColumns:
         data[column] = list(map(dateFix, data[column]))
 
-    format_mapping={
+    troublesomeCurrencyColumns = {
         'Allowance': '${:,.2f}',
         'Paid\nAmount': '${:,.2f}'
         }
-    for key, value in format_mapping.items():
+    for key, value in troublesomeCurrencyColumns.items():
         data[key] = data[key].apply(value.format)
-
-    data['Allowance'] = data['Allowance'].map(str)
-    data['Allowance'] = data['Allowance'].astype(str)
-    data['Allowance'] = data['Allowance'].replace('$-','-$')
-
-    data['Paid\nAmount'] = data['Paid\nAmount'].map(str)
-    data['Paid\nAmount'] = data['Paid\nAmount'].astype(str)
-    data['Paid\nAmount'] = data['Paid\nAmount'].replace('$-','-$')
-
-    troublesomeCurrencyColumns = ('Allowance','Paid\nAmount')
-    for column in troublesomeCurrencyColumns:
-        data[column] = list(map(currencyFix, data[column]))
+        data[key] = list(map(currencyFixNegativeValues, data[key]))
 
     return data
 
-def currencyFix(input):
+def currencyFixNegativeValues(input):
     if '$-' in input:
         logger.debug('Replacing $- with -$')
         input = input.replace('$-','-$')
