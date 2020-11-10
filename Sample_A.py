@@ -71,12 +71,16 @@ def addExtraColumnFromExcel(input_filename, workbook):
 def cleanData(data):
     logger.debug('Calling cleanData')
     data = FillInMissingData(data)
+
+    invalidGroupValues = ['Additional Notice                                                                                                         Test']
+    data = data[~data['Group'].isin(invalidGroupValues)]
+
+    asciiMask = list(map(isSeriesascii, data['Group']))
+    data = data[asciiMask]
     return data
 
-def removeBlankRows(data):
-    logger.debug('Calling removeBlankRows')
-    data = data.dropna(subset = ["Claim Number"])
-    return data
+def isSeriesascii(s):
+    return s.isascii()
 
 def FillInMissingData(data):
     logger.debug('Calling FillInMissingData')
@@ -90,8 +94,7 @@ def saveData(data):
 
 def formatDataForSaving(data):
     logger.debug('Calling formatDataForSaving')
-    logger.debug(data.dtypes)
-
+    logger.debug(f'\ndata.dtypes')
 
     troublesomeTimeColumns = ('Finalized\nDate','Service\nDate From','Service\nDate To')
 
