@@ -68,9 +68,21 @@ def addExtraColumnFromExcel(input_filename, workbook):
     workbook[column_addendum_header] = column_addendum_value
     return workbook
 
+
+
+
+
+
+
+
+
+
+
+
 def cleanData(data):
     logger.debug('Calling cleanData')
     data = FillInMissingData(data)
+
 
     invalidGroupValues = ['Additional Notice                                                                                                         Test']
     data = data[~data['Group'].isin(invalidGroupValues)]
@@ -94,7 +106,7 @@ def saveData(data):
 
 def formatDataForSaving(data):
     logger.debug('Calling formatDataForSaving')
-    logger.debug(f'\ndata.dtypes')
+    # logger.debug(f'\n{data.dtypes}')
 
     troublesomeTimeColumns = ('Finalized\nDate','Service\nDate From','Service\nDate To')
 
@@ -113,9 +125,9 @@ def formatDataForSaving(data):
 
 def currencyFixNegativeValues(input):
     if '$-' in input:
-        logger.debug('Replacing $- with -$')
+        # logger.debug('Replacing $- with -$')
         input = input.replace('$-','-$')
-        logger.debug(f'Result: {input}')
+        # logger.debug(f'Result: {input}')
     return input
 
 def dateFix(input):
@@ -128,7 +140,48 @@ def dateFix(input):
 
 def saveDataAsCSV(data):
     logger.debug('Calling saveDataAsCSV')
+
+    indexOfRowsWithGroupAsTotal = data[data['Group']=='Total'].index.values
+    # logger.debug(indexOfRowsWithGroupAsTotal)
+    # data = list(map(data, formatTotalRows))
+    data = formatTotalRows(data)
+    logger.debug(f'\n\n191: {data.iloc[191]}')
     data.to_csv(output_filename, index = False)
     logger.debug(f'Data saved as CSV at location "{output_filename}"')
+
+def formatTotalRows(dataframe):
+    
+    #due to the possibly dynamic nature of cell A1 ("TEST") changing we have to figure out what the column names are--and then create a dict that can be inserted as a blank series after total so that we match expected output formatting.
+    columns = dataframe.columns.tolist()
+    columnDict = {}
+    for column in columns:
+        columnDict[column] = ''
+
+    indexOfTotalRows = dataframe.index[dataframe['Group'] == 'Total'].tolist()
+    logger.debug(f'Indeces of total rows: {indexOfTotalRows}')
+    dataframe = cleanTotalsColumns(dataframe, columnDict, indexOfTotalRows)
+    dataframe = insertBlankSeriesAfterIndex(dataframe, columnDict, indexOfTotalRows)
+    dataframe = dataframe[:-2] # remove last 2 rows from dataset (the 2nd total, and the extra row we added as part of insertBlankSeriesAfterIndex()
+    return dataframe
+
+def insertBlankSeriesAfterIndex(dataframe, columnDict, rowIndices):
+    line = pandas.DataFrame(columnDict, index=rowIndices)
+    dataframe = dataframe.append(line, ignore_index=False)
+    dataframe = dataframe.sort_index().reset_index(drop=True)
+    return dataframe
+
+def cleanTotalsColumns(dataframe, columnDict, indexOfTotalRows):
+    columnDataToKeep = ('Group', 'Allowance', 'Paid\nAmount')
+    for column in columnDataToKeep:
+        del columnDict[column]
+    logger.debug(f'Remove data from these columns on Total lines:\n{columnDict}')
+
+    for rowIndex in indexOfTotalRows:
+        for columnLabel in columnDict:
+            dataframe.at[rowIndex, columnLabel] = ''
+        
+        # data.iloc[rowIndex]
+        # data.update(new_df)
+    return dataframe
 
 main()
