@@ -27,7 +27,6 @@ logger.setLevel(level)
 
 def main():
     logger.debug('Calling main')
-
     data = getData(input_filename)
     data = cleanData(data)
     saveData(data)
@@ -40,9 +39,7 @@ def getData(input_filename): # non-OOP adapter pattern
 def getDataFromExcel(input_filename):
     logger.debug('Calling getDataFromExcel')
     workbook = pandas.read_excel(input_filename, header=5, dtype=object) # This sets the column labels and removes the header(first 5 rows)
-
     workbook = addExtraColumnFromExcel(input_filename, workbook)
-
     logger.debug(f'Column labels:\n {workbook.columns.tolist()}')
     date_cell = workbook.iloc[14]['Service\nDate From']
     logger.debug(f'E14:\n {date_cell}')
@@ -52,41 +49,23 @@ def addExtraColumnFromExcel(input_filename, workbook):
     logger.debug('Calling addExtraColumnFromExcel')
     wb = openpyxl.load_workbook(input_filename)
     ws = wb.active
-
     column_addendum_header = ws['A1'].value
     logger.debug(f'Additional column header to add:\n{column_addendum_header}')
-    
     column_addendum_values = (
         ws['A2'].value,
         ws['A3'].value,
         ws['A4'].value
         )
-
     column_addendum_value = "\n".join(column_addendum_values)
     logger.debug(f'Additional column value to add:\n{column_addendum_value}')
-
     workbook[column_addendum_header] = column_addendum_value
     return workbook
-
-
-
-
-
-
-
-
-
-
-
 
 def cleanData(data):
     logger.debug('Calling cleanData')
     data = FillInMissingData(data)
-
-
     invalidGroupValues = ['Additional Notice                                                                                                         Test']
     data = data[~data['Group'].isin(invalidGroupValues)]
-
     asciiMask = list(map(isSeriesascii, data['Group']))
     data = data[asciiMask]
     return data
@@ -107,9 +86,7 @@ def saveData(data):
 def formatDataForSaving(data):
     logger.debug('Calling formatDataForSaving')
     # logger.debug(f'\n{data.dtypes}')
-
     troublesomeTimeColumns = ('Finalized\nDate','Service\nDate From','Service\nDate To')
-
     for column in troublesomeTimeColumns:
         data[column] = list(map(dateFix, data[column]))
 
@@ -120,7 +97,6 @@ def formatDataForSaving(data):
     for key, value in troublesomeCurrencyColumns.items():
         data[key] = data[key].apply(value.format)
         data[key] = list(map(currencyFixNegativeValues, data[key]))
-
     return data
 
 def currencyFixNegativeValues(input):
@@ -142,15 +118,12 @@ def saveDataAsCSV(data):
     logger.debug('Calling saveDataAsCSV')
 
     indexOfRowsWithGroupAsTotal = data[data['Group']=='Total'].index.values
-    # logger.debug(indexOfRowsWithGroupAsTotal)
-    # data = list(map(data, formatTotalRows))
     data = formatTotalRows(data)
     logger.debug(f'\n\n191: {data.iloc[191]}')
     data.to_csv(output_filename, index = False)
     logger.debug(f'Data saved as CSV at location "{output_filename}"')
 
 def formatTotalRows(dataframe):
-    
     #due to the possibly dynamic nature of cell A1 ("TEST") changing we have to figure out what the column names are--and then create a dict that can be inserted as a blank series after total so that we match expected output formatting.
     columns = dataframe.columns.tolist()
     columnDict = {}
@@ -179,9 +152,6 @@ def cleanTotalsColumns(dataframe, columnDict, indexOfTotalRows):
     for rowIndex in indexOfTotalRows:
         for columnLabel in columnDict:
             dataframe.at[rowIndex, columnLabel] = ''
-        
-        # data.iloc[rowIndex]
-        # data.update(new_df)
     return dataframe
 
 main()
