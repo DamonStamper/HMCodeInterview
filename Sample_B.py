@@ -17,6 +17,8 @@ try:
 
     import openpyxl
     import pandas
+
+    import helper_save
 except:
     raise Exception("Could not load required python libraries. Please run 'pip install -r requirements.txt' then try again.")
 
@@ -38,7 +40,7 @@ def main():
     logger.debug('Calling main')
     data = getData(input_filename)
     data = sumData(data)
-    saveData(data)
+    helper_save.saveData(data, output_filename)
 
 def sumData(dataframe):
     """Return a dataframe with an additional row containing the sum of rows contained in the list columnsToSum"""
@@ -153,15 +155,6 @@ def mergeDataframes(dataframe1, dataframe2):
     mergedDataframe = dataframe2.join(dataframe1[dataframe1.columns])
     return mergedDataframe
 
-def saveData(data):
-    """Interface for saving data"""
-    logger.debug('Calling saveData')
-    saveDataAsCSV(data)
 
-def saveDataAsCSV(data):
-    """Implementation for saving data to CSV"""
-    logger.debug('Calling saveDataAsCSV')
-    data.to_csv(output_filename, index = False)
-    logger.debug(f'Data saved as CSV at location "{output_filename}"')
 
 main()
