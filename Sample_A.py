@@ -8,6 +8,8 @@ try:
 
     import openpyxl
     import pandas
+
+    import helper_save
 except:
     raise Exception("Could not load required python libraries. Please run 'pip install -r requirements.txt' then try again.")
 
@@ -29,7 +31,7 @@ def main():
     logger.debug('Calling main')
     data = getData(input_filename)
     data = cleanData(data)
-    saveData(data)
+    helper_save.saveData(data, output_filename)
 
 def getData(input_filename): # non-OOP adapter pattern
     logger.debug('Calling getData')
