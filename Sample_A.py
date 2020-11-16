@@ -29,6 +29,7 @@ def main():
     logger.debug('Calling main')
     data = getData(input_filename)
     data = cleanData(data)
+    data = formatDataForSaving(data) # Doing this just before time since there is some data loss (rounding numbers) and may cause unexpected results otherwise.
     saveData(data)
 
 def getData(input_filename): # non-OOP adapter pattern
@@ -80,12 +81,15 @@ def FillInMissingData(data):
 
 def saveData(data):
     logger.debug('Calling saveData')
-    data = formatDataForSaving(data) # Doing this at save time since there is some data loss (rounding numbers) and may cause unexpected results otherwise.
     saveDataAsCSV(data)
 
 def formatDataForSaving(data):
     logger.debug('Calling formatDataForSaving')
-    # logger.debug(f'\n{data.dtypes}')
+    data = formatTotalRows(data)
+    data = formatDateTime(data)
+    return data
+
+def formatDateTime(data):
     troublesomeTimeColumns = ('Finalized\nDate','Service\nDate From','Service\nDate To')
     for column in troublesomeTimeColumns:
         data[column] = list(map(dateFix, data[column]))
@@ -116,10 +120,6 @@ def dateFix(input):
 
 def saveDataAsCSV(data):
     logger.debug('Calling saveDataAsCSV')
-
-    indexOfRowsWithGroupAsTotal = data[data['Group']=='Total'].index.values
-    data = formatTotalRows(data)
-    logger.debug(f'\n\n191: {data.iloc[191]}')
     data.to_csv(output_filename, index = False)
     logger.debug(f'Data saved as CSV at location "{output_filename}"')
 
