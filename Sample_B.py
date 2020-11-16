@@ -40,6 +40,7 @@ def main():
     logger.debug('Calling main')
     data = getData(input_filename)
     data = sumData(data)
+    data = formatDataForSaving(data) # Doing this just before time since there is some data loss (rounding numbers) and may cause unexpected results otherwise.
     helper_save.saveData(data, output_filename)
 
 def sumData(dataframe):
@@ -67,16 +68,21 @@ def getDataFromExcel(input_filename):
     Claims = pandas.read_excel(input_filename, sheet_name = 'Claims 02-13-20', header=9, converters= {'DTE_DISP':pandas.to_datetime, 'DTE_SRVC_BEG':pandas.to_datetime, 'DTE_SRVC_END':pandas.to_datetime, 'PAT_ID': int, 'YTD Total Amount ':int, 'Reimbursement \nAmt. Requested':int})
     logger.info('Please note that expected output calls for "YTD Total Amount" and "Reimbursement \nAmt. Requested" fields to be a integers (which means no decimal values). However this is currency which means that we are not dealing in whole units. I am going to make a judgement call and allow these fields to be floats/have decimal values.')
     additonalColumnsDataframe = claimsExtraInfo()
+
+    #Store column labels for later reference during formatDataForSaving()
+    global EnrollmentInformationColumns
+    EnrollmentInformationColumns = EnrollmentInformation.columns.tolist()
+    global ClaimsColumns
+    ClaimsColumns = Claims.columns.tolist()
+    global additonalColumnsDataframeColumns
+    additonalColumnsDataframeColumns = additonalColumnsDataframe.columns.tolist()
+    
     dataframe = mergeDataframes(EnrollmentInformation, additonalColumnsDataframe)
     dataframe = mergeDataframes(dataframe, Claims)
     dataframe = fillDataframeDesiredData(dataframe)
     dataframe = removePaddedZeros(dataframe, ["CODE 1"])
     dataframe = fillDataframeFromTo(EnrollmentInformation, dataframe)
     dataframe = removeTotals(dataframe)
-    dataframe = setDateTimeColumns(dataframe)
-    # Arrange columns in specific order
-    cols = (EnrollmentInformation.columns.tolist() + additonalColumnsDataframe.columns.tolist() + Claims.columns.tolist())
-    dataframe = dataframe[cols]
     return dataframe
 
 def removeTotals(dataframe):
@@ -155,6 +161,11 @@ def mergeDataframes(dataframe1, dataframe2):
     mergedDataframe = dataframe2.join(dataframe1[dataframe1.columns])
     return mergedDataframe
 
-
+def formatDataForSaving(dataframe):
+    # Arrange columns in specific order
+    cols = (EnrollmentInformationColumns + additonalColumnsDataframeColumns + ClaimsColumns)
+    dataframe = dataframe[cols]
+    dataframe = setDateTimeColumns(dataframe)
+    return dataframe
 
 main()
