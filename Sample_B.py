@@ -41,6 +41,7 @@ def main():
     saveData(data)
 
 def sumData(dataframe):
+    """Return a dataframe with an additional row containing the sum of rows contained in the list columnsToSum"""
     # TODO: Better way to do this https://stackoverflow.com/a/62734983/7902967
     logger.debug('Calling sumData')
     columnsToSum = ['CHARGES', 'OOP', 'ACCESS_FEES', 'SPECL_DED', 'COPAY', 'NON_COVERED', 'BYD', 'MM_PAY', 'OOA_DRG', 'ITS_SURCHARGE','TOTAL']
@@ -52,11 +53,13 @@ def sumData(dataframe):
     return dataframe
 
 def getData(input_filename): # non-OOP adapter pattern
+    """'interface' for getting cleaned/scrubbed data from a source"""
     logger.debug('Calling getData')
     data = getDataFromExcel(input_filename)
     return data
 
 def getDataFromExcel(input_filename):
+    """Implementation of getData for Excel (xls, xlsx) sources. Returns cleaned dataframe."""
     logger.debug('Calling getDataFromExcel')
     EnrollmentInformation = pandas.read_excel(input_filename, sheet_name = 'Enrollment Information', header=0, dtype=object)
     Claims = pandas.read_excel(input_filename, sheet_name = 'Claims 02-13-20', header=9, converters= {'DTE_DISP':pandas.to_datetime, 'DTE_SRVC_BEG':pandas.to_datetime, 'DTE_SRVC_END':pandas.to_datetime, 'PAT_ID': int, 'YTD Total Amount ':int, 'Reimbursement \nAmt. Requested':int})
@@ -75,15 +78,21 @@ def getDataFromExcel(input_filename):
     return dataframe
 
 def removeTotals(dataframe):
+    """Data cleanup by removing rows containing 'TOTAL'."""
+    # TODO: Pull this out into an interface/implementation.
+    logger.debug('Calling removeTotals')
     dataframe = dataframe.drop(dataframe[dataframe['PRIM_PVDR_NO'] == 'TOTAL'].index)
     return dataframe
 
 def removePaddedZeros(dataframe, columns):
+    """Data cleanup by removing left padded zeros"""
     logger.debug('Calling removePaddedZeros')
     dataframe[columns] = dataframe[columns].apply(pandas.to_numeric)
     return dataframe
 
 def fillDataframeDesiredData(dataframe):
+    """Data cleanup by forward filling columns in the cols list. Returns dataframe.
+    Forward filling means cell A1 will will A2 if A2 doesn't have data, if A2 has data then A2 will be used to fill A3 if it doesn't have data, etc    """
     cols = list(columnInfo.keys())
     logger.debug(f'cols to ffill():\n{cols}')
     # logger.debug(f'dataframe before fillDataframeDesiredData:\n{dataframe}')
@@ -92,6 +101,8 @@ def fillDataframeDesiredData(dataframe):
     return dataframe
 
 def fillDataframeFromTo(fromDataframe, toDataframe):
+    """Append to columns/labels in 'toDataframe' with columns/labels from 'fromDataframe', resulting in toDataframe's columns to be the leftmost columns.
+    Forward fills the resulting dataframe."""
     cols = fromDataframe.columns.tolist()
     toDataframe.loc[:,cols] = toDataframe.loc[:,cols].ffill()
     return toDataframe
@@ -110,6 +121,7 @@ def dateFix(input):
     return iterant
 
 def setDateTimeColumns(data):
+    """Sets the columns in datetimeColumns to a specific datetime format."""
     datetimeColumns = ('DTE_DISP','DTE_SRVC_BEG','DTE_SRVC_END')
     for column in datetimeColumns:
         logger.debug(f'Converting datetime in {column}')
@@ -118,9 +130,11 @@ def setDateTimeColumns(data):
     return data
 
 def claimsExtraInfo():
+    """Returns dataframe from 'claims *' worksheet. Due to date being included in the sheet name this works on a match basis and may cause issues if multiple sheets contain the word 'claims'"""
+    # TODO: This feels hardcoded to excel spreadsheets. Abstract this out to something better?
+    logger.debug('Calling claimsExtraInfo')
     wb = openpyxl.load_workbook(input_filename)
     for s in range(len(wb.sheetnames)):
-        # logger.debug(f'Looking at sheet {s.title}')
         if 'Claims' in  wb.sheetnames[s]:
             wb.active = s
             ws = wb.active
@@ -131,19 +145,21 @@ def claimsExtraInfo():
         columnInfo[columnName] = (ws[location].value).split(':')[1].strip()
 
     dataframe = pandas.DataFrame([columnInfo], columns=columnInfo.keys())
-    # logger.debug(f'\n{dataframe}')
     return dataframe
 
 def mergeDataframes(dataframe1, dataframe2):
+    """Combines two dataframes. Does not do any advanced processing (ffill, removing 0 pads, etc)"""
+    logger.debug('Calling mergeDataframes')
     mergedDataframe = dataframe2.join(dataframe1[dataframe1.columns])
-    # logger.debug(mergedDataframe)
     return mergedDataframe
 
 def saveData(data):
+    """Interface for saving data"""
     logger.debug('Calling saveData')
     saveDataAsCSV(data)
 
 def saveDataAsCSV(data):
+    """Implementation for saving data to CSV"""
     logger.debug('Calling saveDataAsCSV')
     data.to_csv(output_filename, index = False)
     logger.debug(f'Data saved as CSV at location "{output_filename}"')
