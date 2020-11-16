@@ -41,7 +41,7 @@ def main():
     saveData(data)
 
 def sumData(dataframe):
-    # Better way to do this https://stackoverflow.com/a/62734983/7902967
+    # TODO: Better way to do this https://stackoverflow.com/a/62734983/7902967
     logger.debug('Calling sumData')
     columnsToSum = ['CHARGES', 'OOP', 'ACCESS_FEES', 'SPECL_DED', 'COPAY', 'NON_COVERED', 'BYD', 'MM_PAY', 'OOA_DRG', 'ITS_SURCHARGE','TOTAL']
     sum = dataframe.sum(axis = 0, skipna = True)
@@ -59,7 +59,6 @@ def getData(input_filename): # non-OOP adapter pattern
 def getDataFromExcel(input_filename):
     logger.debug('Calling getDataFromExcel')
     EnrollmentInformation = pandas.read_excel(input_filename, sheet_name = 'Enrollment Information', header=0, dtype=object)
-    # Claims = pandas.read_excel(input_filename, sheet_name = 'Claims 02-13-20', header=9, dtype=str, converters= {'DTE_DISP':pandas.to_datetime, 'DTE_SRVC_BEG':pandas.to_datetime, 'DTE_SRVC_END':pandas.to_datetime, 'PAT_ID': int, 'YTD Total Amount ':int, 'Reimbursement \nAmt. Requested':int})
     Claims = pandas.read_excel(input_filename, sheet_name = 'Claims 02-13-20', header=9, converters= {'DTE_DISP':pandas.to_datetime, 'DTE_SRVC_BEG':pandas.to_datetime, 'DTE_SRVC_END':pandas.to_datetime, 'PAT_ID': int, 'YTD Total Amount ':int, 'Reimbursement \nAmt. Requested':int})
     logger.info('Please note that expected output calls for "YTD Total Amount" and "Reimbursement \nAmt. Requested" fields to be a integers (which means no decimal values). However this is currency which means that we are not dealing in whole units. I am going to make a judgement call and allow these fields to be floats/have decimal values.')
     additonalColumnsDataframe = claimsExtraInfo()
@@ -85,19 +84,14 @@ def removePaddedZeros(dataframe, columns):
     return dataframe
 
 def fillDataframeDesiredData(dataframe):
-    # for key in columnInfo:
-    #     dataframe.ffill
-    # dataframe = dataframe.ffill(list(columnInfo.keys()))
     cols = list(columnInfo.keys())
     logger.debug(f'cols to ffill():\n{cols}')
     # logger.debug(f'dataframe before fillDataframeDesiredData:\n{dataframe}')
     dataframe.loc[:,cols] = dataframe.loc[:,cols].ffill()
     # logger.debug(f'dataframe after fillDataframeDesiredData:\n{dataframe}')
-    # dataframe = dataframe.ffill(list(columnInfo.keys()))
     return dataframe
 
 def fillDataframeFromTo(fromDataframe, toDataframe):
-    # cols = ['X', 'Y']
     cols = fromDataframe.columns.tolist()
     toDataframe.loc[:,cols] = toDataframe.loc[:,cols].ffill()
     return toDataframe
@@ -107,7 +101,6 @@ def dateFix(input):
     # TODO: Is running platform.system() performant given that this function is called repeatedly via map? system() means this is a method, but is it just an accessor method or something that does logic that doesn't need repeated ROWS*3 times?
     iterant = pandas.to_datetime(input, errors='ignore')
     try:
-        # iterant = iterant.strftime('%m/%d/%Y %H:%M')
         if platform.system() != 'Windows':
             iterant = iterant.strftime('%-m/%-d/%Y %-H:%M')
         else:
@@ -142,11 +135,7 @@ def claimsExtraInfo():
     return dataframe
 
 def mergeDataframes(dataframe1, dataframe2):
-    #  clumn_addendum_value = "\n".join(column_addendum_values)
-    # mergedDataframe = pandas.merge(dataframe1, dataframe2)
-    # mergedDataframe = dataframe1.join(dataframe2[dataframe2.columns])
     mergedDataframe = dataframe2.join(dataframe1[dataframe1.columns])
-    # mergedDataframe = mergedDataframe.ffill()
     # logger.debug(mergedDataframe)
     return mergedDataframe
 
