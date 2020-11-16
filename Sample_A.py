@@ -8,6 +8,7 @@ try:
 
     import openpyxl
     import pandas
+    import helper_save
 except:
     raise Exception("Could not load required python libraries. Please run 'pip install -r requirements.txt' then try again.")
 
@@ -30,7 +31,7 @@ def main():
     data = getData(input_filename)
     data = cleanData(data)
     data = formatDataForSaving(data) # Doing this just before time since there is some data loss (rounding numbers) and may cause unexpected results otherwise.
-    saveData(data)
+    helper_save.saveData(data, output_filename)
 
 def getData(input_filename): # non-OOP adapter pattern
     logger.debug('Calling getData')
@@ -79,10 +80,6 @@ def FillInMissingData(data):
     data = data.ffill() # Using ffill to propagate data from "top" rows to "below" rows because input data was designed for human readers in that they would assume missing data on "child" rows could be found on "parent" rows.
     return data
 
-def saveData(data):
-    logger.debug('Calling saveData')
-    saveDataAsCSV(data)
-
 def formatDataForSaving(data):
     logger.debug('Calling formatDataForSaving')
     data = formatTotalRows(data)
@@ -117,11 +114,6 @@ def dateFix(input):
     except Exception:
         pass
     return iterant
-
-def saveDataAsCSV(data):
-    logger.debug('Calling saveDataAsCSV')
-    data.to_csv(output_filename, index = False)
-    logger.debug(f'Data saved as CSV at location "{output_filename}"')
 
 def formatTotalRows(dataframe):
     #due to the possibly dynamic nature of cell A1 ("TEST") changing we have to figure out what the column names are--and then create a dict that can be inserted as a blank series after total so that we match expected output formatting.
