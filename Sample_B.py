@@ -37,8 +37,19 @@ logger.setLevel(level)
 def main():
     logger.debug('Calling main')
     data = getData(input_filename)
-    # data = cleanData(data)
+    data = sumData(data)
     saveData(data)
+
+def sumData(dataframe):
+    # Better way to do this https://stackoverflow.com/a/62734983/7902967
+    logger.debug('Calling sumData')
+    columnsToSum = ['CHARGES', 'OOP', 'ACCESS_FEES', 'SPECL_DED', 'COPAY', 'NON_COVERED', 'BYD', 'MM_PAY', 'OOA_DRG', 'ITS_SURCHARGE','TOTAL']
+    sum = dataframe.sum(axis = 0, skipna = True)
+    dataframe = dataframe.append(sum[columnsToSum], ignore_index=True)
+    logger.debug(sum[columnsToSum])
+    dataframe = dataframe.round(2)
+    dataframe['PRIM_PVDR_NO'].iloc[-1] = 'TOTAL' #Set last row's "PRIM_PVDR_NO" column to 'TOTAL'
+    return dataframe
 
 def getData(input_filename): # non-OOP adapter pattern
     logger.debug('Calling getData')
@@ -48,7 +59,8 @@ def getData(input_filename): # non-OOP adapter pattern
 def getDataFromExcel(input_filename):
     logger.debug('Calling getDataFromExcel')
     EnrollmentInformation = pandas.read_excel(input_filename, sheet_name = 'Enrollment Information', header=0, dtype=object)
-    Claims = pandas.read_excel(input_filename, sheet_name = 'Claims 02-13-20', header=9, dtype=str, converters= {'DTE_DISP':pandas.to_datetime, 'DTE_SRVC_BEG':pandas.to_datetime, 'DTE_SRVC_END':pandas.to_datetime, 'PAT_ID': int, 'YTD Total Amount ':int, 'Reimbursement \nAmt. Requested':int})
+    # Claims = pandas.read_excel(input_filename, sheet_name = 'Claims 02-13-20', header=9, dtype=str, converters= {'DTE_DISP':pandas.to_datetime, 'DTE_SRVC_BEG':pandas.to_datetime, 'DTE_SRVC_END':pandas.to_datetime, 'PAT_ID': int, 'YTD Total Amount ':int, 'Reimbursement \nAmt. Requested':int})
+    Claims = pandas.read_excel(input_filename, sheet_name = 'Claims 02-13-20', header=9, converters= {'DTE_DISP':pandas.to_datetime, 'DTE_SRVC_BEG':pandas.to_datetime, 'DTE_SRVC_END':pandas.to_datetime, 'PAT_ID': int, 'YTD Total Amount ':int, 'Reimbursement \nAmt. Requested':int})
     logger.info('Please note that expected output calls for "YTD Total Amount" and "Reimbursement \nAmt. Requested" fields to be a integers (which means no decimal values). However this is currency which means that we are not dealing in whole units. I am going to make a judgement call and allow these fields to be floats/have decimal values.')
     additonalColumnsDataframe = claimsExtraInfo()
     dataframe = mergeDataframes(EnrollmentInformation, additonalColumnsDataframe)
@@ -56,12 +68,15 @@ def getDataFromExcel(input_filename):
     dataframe = fillDataframeDesiredData(dataframe)
     dataframe = removePaddedZeros(dataframe, ["CODE 1"])
     dataframe = fillDataframeFromTo(EnrollmentInformation, dataframe)
-
-
+    dataframe = removeTotals(dataframe)
     dataframe = setDateTimeColumns(dataframe)
     # Arrange columns in specific order
     cols = (EnrollmentInformation.columns.tolist() + additonalColumnsDataframe.columns.tolist() + Claims.columns.tolist())
     dataframe = dataframe[cols]
+    return dataframe
+
+def removeTotals(dataframe):
+    dataframe = dataframe.drop(dataframe[dataframe['PRIM_PVDR_NO'] == 'TOTAL'].index)
     return dataframe
 
 def removePaddedZeros(dataframe, columns):
@@ -75,9 +90,9 @@ def fillDataframeDesiredData(dataframe):
     # dataframe = dataframe.ffill(list(columnInfo.keys()))
     cols = list(columnInfo.keys())
     logger.debug(f'cols to ffill():\n{cols}')
-    logger.debug(f'dataframe before fillDataframeDesiredData:\n{dataframe}')
+    # logger.debug(f'dataframe before fillDataframeDesiredData:\n{dataframe}')
     dataframe.loc[:,cols] = dataframe.loc[:,cols].ffill()
-    logger.debug(f'dataframe after fillDataframeDesiredData:\n{dataframe}')
+    # logger.debug(f'dataframe after fillDataframeDesiredData:\n{dataframe}')
     # dataframe = dataframe.ffill(list(columnInfo.keys()))
     return dataframe
 
