@@ -9,6 +9,7 @@ try:
     import openpyxl
     import pandas
     import helper_save
+    import helper_wrappers
 except:
     raise Exception("Could not load required python libraries. Please run 'pip install -r requirements.txt' then try again.")
 
@@ -26,29 +27,31 @@ loglevels = {
 level = loglevels[logging_level]
 logger.setLevel(level)
 
+@helper_wrappers.callLogger
+@helper_wrappers.timer
 def main():
-    logger.debug('Calling main')
     data = getData(input_filename)
     data = cleanData(data)
     data = formatDataForSaving(data) # Doing this just before time since there is some data loss (rounding numbers) and may cause unexpected results otherwise.
     helper_save.saveData(data, output_filename)
 
+@helper_wrappers.callLogger
+@helper_wrappers.timer
 def getData(input_filename): # non-OOP adapter pattern
-    logger.debug('Calling getData')
     data = getDataFromExcel(input_filename)
     return data
 
+@helper_wrappers.callLogger
+@helper_wrappers.timer
 def getDataFromExcel(input_filename):
-    logger.debug('Calling getDataFromExcel')
     workbook = pandas.read_excel(input_filename, header=5, dtype=object) # This sets the column labels and removes the header(first 5 rows)
     workbook = addExtraColumnFromExcel(input_filename, workbook)
     logger.debug(f'Column labels:\n {workbook.columns.tolist()}')
-    date_cell = workbook.iloc[14]['Service\nDate From']
-    logger.debug(f'E14:\n {date_cell}')
     return workbook
 
+@helper_wrappers.callLogger
+@helper_wrappers.timer
 def addExtraColumnFromExcel(input_filename, workbook):
-    logger.debug('Calling addExtraColumnFromExcel')
     wb = openpyxl.load_workbook(input_filename)
     ws = wb.active
     column_addendum_header = ws['A1'].value
@@ -63,8 +66,9 @@ def addExtraColumnFromExcel(input_filename, workbook):
     workbook[column_addendum_header] = column_addendum_value
     return workbook
 
+@helper_wrappers.callLogger
+@helper_wrappers.timer
 def cleanData(data):
-    logger.debug('Calling cleanData')
     data = FillInMissingData(data)
     invalidGroupValues = ['Additional Notice                                                                                                         Test']
     data = data[~data['Group'].isin(invalidGroupValues)]
@@ -75,17 +79,21 @@ def cleanData(data):
 def isSeriesascii(s):
     return s.isascii()
 
+@helper_wrappers.callLogger
+@helper_wrappers.timer
 def FillInMissingData(data):
-    logger.debug('Calling FillInMissingData')
     data = data.ffill() # Using ffill to propagate data from "top" rows to "below" rows because input data was designed for human readers in that they would assume missing data on "child" rows could be found on "parent" rows.
     return data
 
+@helper_wrappers.callLogger
+@helper_wrappers.timer
 def formatDataForSaving(data):
-    logger.debug('Calling formatDataForSaving')
     data = formatTotalRows(data)
     data = formatDateTime(data)
     return data
 
+@helper_wrappers.callLogger
+@helper_wrappers.timer
 def formatDateTime(data):
     troublesomeTimeColumns = ('Finalized\nDate','Service\nDate From','Service\nDate To')
     for column in troublesomeTimeColumns:
@@ -100,6 +108,8 @@ def formatDateTime(data):
         data[key] = list(map(currencyFixNegativeValues, data[key]))
     return data
 
+# @helper_wrappers.callLogger
+# @helper_wrappers.timer
 def currencyFixNegativeValues(input):
     if '$-' in input:
         # logger.debug('Replacing $- with -$')
@@ -107,6 +117,8 @@ def currencyFixNegativeValues(input):
         # logger.debug(f'Result: {input}')
     return input
 
+# @helper_wrappers.callLogger
+# @helper_wrappers.timer
 def dateFix(input):
     iterant = pandas.to_datetime(input, errors='ignore')
     try:
@@ -115,6 +127,8 @@ def dateFix(input):
         pass
     return iterant
 
+@helper_wrappers.callLogger
+@helper_wrappers.timer
 def formatTotalRows(dataframe):
     #due to the possibly dynamic nature of cell A1 ("TEST") changing we have to figure out what the column names are--and then create a dict that can be inserted as a blank series after total so that we match expected output formatting.
     columns = dataframe.columns.tolist()
@@ -129,12 +143,16 @@ def formatTotalRows(dataframe):
     dataframe = dataframe[:-2] # remove last 2 rows from dataset (the 2nd total, and the extra row we added as part of insertBlankSeriesAfterIndex()
     return dataframe
 
+@helper_wrappers.callLogger
+@helper_wrappers.timer
 def insertBlankSeriesAfterIndex(dataframe, columnDict, rowIndices):
     line = pandas.DataFrame(columnDict, index=rowIndices)
     dataframe = dataframe.append(line, ignore_index=False)
     dataframe = dataframe.sort_index().reset_index(drop=True)
     return dataframe
 
+@helper_wrappers.callLogger
+@helper_wrappers.timer
 def cleanTotalsColumns(dataframe, columnDict, indexOfTotalRows):
     columnDataToKeep = ('Group', 'Allowance', 'Paid\nAmount')
     for column in columnDataToKeep:
